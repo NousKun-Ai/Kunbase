@@ -80,7 +80,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
               <span className="text-muted-foreground">•</span>
               <span className="text-primary font-medium">{displaySkill.category}</span>
               <span className="text-muted-foreground">•</span>
-              <span className="flex items-center text-muted-foreground"><Calendar className="mr-1 h-3 w-3"/> {new Date((displaySkill as any).created_at).toLocaleDateString()}</span>
+              <span className="flex items-center text-muted-foreground"><Calendar className="mr-1 h-3 w-3"/> {((displaySkill as any).created_at || '').split('T')[0]}</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent pb-2">{displaySkill.title}</h1>
