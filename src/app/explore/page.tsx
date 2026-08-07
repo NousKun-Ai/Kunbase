@@ -12,13 +12,10 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
   const { q } = await searchParams
   const supabase = await createClient()
 
-  // Fetch all public skills along with their creator's profile
+  // Fetch all public skills
   let query = supabase
     .from("skills")
-    .select(`
-      *,
-      profiles ( username, name, avatar_url )
-    `)
+    .select("*")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(50)
@@ -29,7 +26,18 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
 
   const { data: skills } = await query
 
-  const allSkills = (skills as unknown as DatabaseSkill[]) || []
+  const rawSkills = skills || []
+  
+  // Fetch profiles for these skills manually to avoid foreign key join errors
+  const ownerIds = [...new Set(rawSkills.map(s => s.owner_id))]
+  const { data: profiles } = ownerIds.length > 0 
+    ? await supabase.from("profiles").select("id, username, name, avatar_url").in("id", ownerIds)
+    : { data: [] }
+
+  const allSkills = rawSkills.map(skill => ({
+    ...skill,
+    profiles: profiles?.find(p => p.id === skill.owner_id) || { username: 'unknown', name: 'Unknown User', avatar_url: null }
+  })) as unknown as DatabaseSkill[]
 
   return (
     <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">

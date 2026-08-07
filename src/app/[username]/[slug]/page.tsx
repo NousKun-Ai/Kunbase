@@ -13,17 +13,29 @@ import type { DatabaseSkill } from "@/features/skills/components/SkillCard"
 
 async function getSkill(username: string, slug: string) {
   const supabase = await createClient()
+  
+  // First, fetch the skill
   const { data: row } = await supabase
     .from("skills")
-    .select("*, owner:profiles!skills_owner_id_fkey(name, username, avatar_url)")
+    .select("*")
     .eq("slug", slug)
     .single()
 
-  if (!row || (row as any).owner?.username !== username) return null
+  if (!row) return null
+
+  // Then, fetch the profile based on the skill's owner_id
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, username, avatar_url")
+    .eq("id", row.owner_id)
+    .single()
+
+  // Validate that the profile exists and the username matches the URL
+  if (!profile || profile.username !== username) return null
   
   const skill = {
     ...row,
-    profiles: (row as any).owner
+    profiles: profile
   } as DatabaseSkill
 
   return skill

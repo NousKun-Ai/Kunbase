@@ -14,15 +14,23 @@ export default async function TrendingPage() {
   // Fetch top 50 public skills by stars
   const { data: skills } = await supabase
     .from("skills")
-    .select(`
-      *,
-      profiles ( username, name, avatar_url )
-    `)
+    .select("*")
     .eq("visibility", "public")
     .order("stars_count", { ascending: false })
     .limit(50)
 
-  const sortedTrending = (skills as unknown as DatabaseSkill[]) || []
+  const rawSkills = skills || []
+  
+  // Fetch profiles for these skills manually
+  const ownerIds = [...new Set(rawSkills.map(s => s.owner_id))]
+  const { data: profiles } = ownerIds.length > 0 
+    ? await supabase.from("profiles").select("id, username, name, avatar_url").in("id", ownerIds)
+    : { data: [] }
+
+  const sortedTrending = rawSkills.map(skill => ({
+    ...skill,
+    profiles: profiles?.find(p => p.id === skill.owner_id) || { username: 'unknown', name: 'Unknown User', avatar_url: null }
+  })) as unknown as DatabaseSkill[]
 
   return (
     <div className="container mx-auto px-4 py-12 md:py-20 max-w-7xl">

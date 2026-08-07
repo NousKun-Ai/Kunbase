@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tail -80 /tmp/kunhub-dev.log)",
+      "Read(//private/tmp/**)"
+    ]
+  }
+}
