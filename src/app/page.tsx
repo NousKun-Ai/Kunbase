@@ -1,13 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { Button, buttonVariants } from "@/components/ui/button"
-import { Search } from "lucide-react"
-import { SkillCard } from "@/features/skills/components/SkillCard"
+import { SkillCard, type DatabaseSkill } from "@/features/skills/components/SkillCard"
 import { HeroSearch } from "@/components/layout/HeroSearch"
 import { createClient } from "@/lib/supabase/server"
-import { toMockSkill, type SkillRow } from "@/lib/skills"
 
 export default async function HomePage() {
   const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    redirect("/login")
+  }
 
   const [{ data: trendingRows }, { data: recentRows }] = await Promise.all([
     supabase
@@ -24,8 +29,15 @@ export default async function HomePage() {
       .limit(8),
   ])
 
-  const TRENDING_SKILLS = ((trendingRows ?? []) as SkillRow[]).map(toMockSkill)
-  const RECENT_SKILLS = ((recentRows ?? []) as SkillRow[]).map(toMockSkill)
+  const TRENDING_SKILLS = ((trendingRows ?? []) as any[]).map(skill => ({
+    ...skill,
+    profiles: skill.owner
+  })) as DatabaseSkill[]
+  
+  const RECENT_SKILLS = ((recentRows ?? []) as any[]).map(skill => ({
+    ...skill,
+    profiles: skill.owner
+  })) as DatabaseSkill[]
 
   return (
     <div className="flex flex-col">
@@ -37,7 +49,7 @@ export default async function HomePage() {
             The open registry for Prompts and AI Skills.
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mb-12">
-            Discover, publish, copy, and fork the world's best Prompts and AI Skills. 
+            Discover, publish, copy, and fork the world&apos;s best Prompts and AI Skills. 
             Stop rewriting prompts and architectures from scratch.
           </p>
           
@@ -54,8 +66,8 @@ export default async function HomePage() {
           </div>
           {TRENDING_SKILLS.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...TRENDING_SKILLS].sort((a, b) => b.stats.stars - a.stats.stars).map((skill) => (
-                <SkillCard key={skill.id} skill={skill} />
+              {[...TRENDING_SKILLS].sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
+                <SkillCard key={skill.id} skill={skill} index={i} />
               ))}
             </div>
           ) : (
@@ -78,8 +90,8 @@ export default async function HomePage() {
           </div>
           {RECENT_SKILLS.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...RECENT_SKILLS].sort((a, b) => b.stats.stars - a.stats.stars).map((skill) => (
-                <SkillCard key={`recent-${skill.id}`} skill={skill} />
+              {[...RECENT_SKILLS].sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
+                <SkillCard key={`recent-${skill.id}`} skill={skill} index={i} />
               ))}
             </div>
           ) : (

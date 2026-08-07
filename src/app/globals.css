@@ -60,10 +60,22 @@
 /* Force dark mode entirely for KunHub MVP as per PRD */
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: radial-gradient(circle at 15% 50%, oklch(0.6 0.15 260 / 0.1), transparent 30%),
+              radial-gradient(circle at 85% 30%, oklch(0.6 0.15 300 / 0.1), transparent 30%),
+              var(--background);
+  background-attachment: fixed;
   font-family: var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card/40 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  .glass-panel-hover {
+    @apply transition-all duration-300 hover:bg-card/60 hover:border-white/20 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] hover:-translate-y-1;
+  }
 }
 
 @layer base {

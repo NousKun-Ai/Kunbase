@@ -1,14 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Sparkles, Code2, UploadCloud, Loader2, Lock, Globe } from "lucide-react"
+import { Sparkles, Code2, UploadCloud, Loader2, Lock, Globe, Eye, Code } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -18,6 +22,11 @@ import {
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { slugify } from "@/lib/utils"
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 }
+}
 
 export function PublishForm() {
   const router = useRouter()
@@ -31,11 +40,18 @@ export function PublishForm() {
   const [category, setCategory] = React.useState("")
   const [tags, setTags] = React.useState("")
   const [visibility, setVisibility] = React.useState<"public" | "private">("public")
+  
+  const [isDragging, setIsDragging] = React.useState(false)
+  const [editorMode, setEditorMode] = React.useState<"edit" | "preview">("edit")
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    readFile(file)
+    e.target.value = ''
+  }
 
+  const readFile = (file: File) => {
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result
@@ -44,9 +60,23 @@ export function PublishForm() {
       }
     }
     reader.readAsText(file)
-    
-    // Reset input so the same file can be uploaded again if needed
-    e.target.value = ''
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) readFile(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,17 +139,25 @@ export function PublishForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-4xl mx-auto">
+    <motion.form 
+      onSubmit={handleSubmit} 
+      className="space-y-8 max-w-5xl mx-auto"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: { transition: { staggerChildren: 0.05 } }
+      }}
+    >
       
       {/* Type Selection */}
-      <div className="space-y-3">
+      <motion.div variants={itemVariants} className="space-y-3">
         <Label className="text-lg">What are you publishing?</Label>
         <Tabs defaultValue="prompt" onValueChange={(v) => setType(v as "prompt" | "skill")} className="w-full sm:w-[400px]">
-          <TabsList className="grid w-full grid-cols-2 h-12">
-            <TabsTrigger value="prompt" className="text-base gap-2">
+          <TabsList className="grid w-full grid-cols-2 h-12 bg-background/50 border border-white/5 backdrop-blur-sm">
+            <TabsTrigger value="prompt" className="text-base gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               <Sparkles className="w-4 h-4" /> Prompt
             </TabsTrigger>
-            <TabsTrigger value="skill" className="text-base gap-2">
+            <TabsTrigger value="skill" className="text-base gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
               <Code2 className="w-4 h-4" /> AI Skill
             </TabsTrigger>
           </TabsList>
@@ -129,39 +167,40 @@ export function PublishForm() {
             ? "Prompts are raw text instructions optimized for LLMs (like Claude or ChatGPT)." 
             : "Skills are complex architectures, tools, or markdown files for AI agents (like Cursor rules or MCP servers)."}
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* Left Column: Metadata */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="space-y-2">
+        <div className="lg:col-span-4 space-y-6">
+          <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
               placeholder="e.g. Senior Staff Engineer Persona"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              className="bg-background/40 focus:bg-background/80 transition-colors"
               required
             />
-          </div>
+          </motion.div>
 
-          <div className="space-y-2">
+          <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="description">Short Description</Label>
             <Textarea
               id="description"
               placeholder="Briefly explain what this does..."
-              className="resize-none h-24"
+              className="resize-none h-24 bg-background/40 focus:bg-background/80 transition-colors"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
             />
-          </div>
+          </motion.div>
 
-          <div className="space-y-2">
+          <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select required value={category} onValueChange={(v) => setCategory(v ?? "")}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-background/40 focus:bg-background/80 transition-colors">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -172,12 +211,12 @@ export function PublishForm() {
                 <SelectItem value="ai-architecture">AI Architecture</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </motion.div>
 
-          <div className="space-y-2">
+          <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="visibility">Visibility</Label>
             <Select value={visibility} onValueChange={(v) => setVisibility(v as "public" | "private")}>
-              <SelectTrigger id="visibility">
+              <SelectTrigger id="visibility" className="bg-background/40 focus:bg-background/80 transition-colors">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -194,24 +233,31 @@ export function PublishForm() {
                 ? "Visible to everyone in the registry."
                 : "Only visible to you."}
             </p>
-          </div>
+          </motion.div>
 
-          <div className="space-y-2">
+          <motion.div variants={itemVariants} className="space-y-2">
             <Label htmlFor="tags">Tags (comma separated)</Label>
             <Input
               id="tags"
               placeholder="e.g. frontend, react, persona"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
+              className="bg-background/40 focus:bg-background/80 transition-colors"
             />
-          </div>
+          </motion.div>
         </div>
 
         {/* Right Column: Editor */}
-        <div className="md:col-span-2 flex flex-col space-y-2">
+        <motion.div variants={itemVariants} className="lg:col-span-8 flex flex-col space-y-2 h-[600px] lg:h-auto min-h-[500px]">
           <div className="flex items-center justify-between">
             <Label htmlFor="content">Content (Markdown supported)</Label>
-            <div>
+            <div className="flex items-center gap-2">
+              <Tabs value={editorMode} onValueChange={(v) => setEditorMode(v as any)} className="h-8">
+                <TabsList className="h-8 bg-background/50 border border-white/5">
+                  <TabsTrigger value="edit" className="text-xs px-3 h-6"><Code className="w-3 h-3 mr-1" /> Edit</TabsTrigger>
+                  <TabsTrigger value="preview" className="text-xs px-3 h-6"><Eye className="w-3 h-3 mr-1" /> Preview</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <input 
                 type="file" 
                 id="file-upload" 
@@ -221,9 +267,9 @@ export function PublishForm() {
               />
               <Button 
                 type="button" 
-                variant="secondary" 
+                variant="outline" 
                 size="sm" 
-                className="h-7 text-xs"
+                className="h-8 text-xs border-primary/20 hover:bg-primary/10 hover:text-primary transition-colors"
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
                 <UploadCloud className="w-3 h-3 mr-1.5" />
@@ -231,33 +277,98 @@ export function PublishForm() {
               </Button>
             </div>
           </div>
-          <div className="relative flex-1 min-h-[400px] border rounded-lg bg-muted/30 focus-within:ring-2 focus-within:ring-primary/50 transition-all overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-10 bg-muted/50 border-b flex items-center px-4 text-xs font-mono text-muted-foreground">
+          
+          <div 
+            className={`relative flex-1 border rounded-lg overflow-hidden transition-all duration-300 ${isDragging ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-white/10 bg-black/20'}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="absolute top-0 left-0 w-full h-9 bg-black/40 border-b border-white/5 flex items-center px-4 text-xs font-mono text-muted-foreground z-10 backdrop-blur-md">
               {type === "prompt" ? "system-prompt.md" : "architecture-rule.mdc"}
             </div>
-            <textarea 
-              id="content"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full h-full min-h-[400px] bg-transparent resize-none outline-none p-4 pt-14 font-mono text-sm leading-relaxed"
-              placeholder={type === "prompt" 
-                ? "You are an expert AI assistant..." 
-                : "# AI Skill\n\nDefine your complex rule or architecture here..."}
-              required
-            ></textarea>
+            
+            <AnimatePresence mode="wait">
+              {editorMode === "edit" ? (
+                <motion.textarea 
+                  key="edit"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="absolute inset-0 w-full h-full bg-transparent resize-none outline-none p-4 pt-12 font-mono text-sm leading-relaxed scrollbar-thin scrollbar-thumb-white/10"
+                  placeholder={type === "prompt" 
+                    ? "You are an expert AI assistant...\n\n(Drag and drop a file here)" 
+                    : "# AI Skill\n\nDefine your complex rule or architecture here...\n\n(Drag and drop a file here)"}
+                  required
+                />
+              ) : (
+                <motion.div 
+                  key="preview"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute inset-0 w-full h-full bg-transparent p-4 pt-12 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10"
+                >
+                  <div className="prose prose-invert prose-sm max-w-none">
+                    {content ? (
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {content}
+                      </ReactMarkdown>
+                    ) : (
+                      <p className="text-muted-foreground italic">Nothing to preview yet...</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isDragging && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm border-2 border-dashed border-primary rounded-lg m-2 pointer-events-none"
+                >
+                  <div className="flex flex-col items-center text-primary">
+                    <UploadCloud className="w-12 h-12 mb-4 animate-bounce" />
+                    <span className="text-lg font-medium">Drop file to upload</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {error && (
-        <p className="text-sm text-destructive text-right">{error}</p>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.p 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="text-sm text-destructive text-right"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
-      <div className="flex items-center justify-end pt-6 border-t">
-        <Button type="button" variant="ghost" className="mr-4" onClick={() => router.back()}>
+      <motion.div variants={itemVariants} className="flex items-center justify-end pt-6 border-t border-white/5">
+        <Button type="button" variant="ghost" className="mr-4 hover:bg-white/5" onClick={() => router.back()}>
           Cancel
         </Button>
-        <Button type="submit" size="lg" disabled={isSubmitting} className="min-w-[150px]">
+        <Button 
+          type="submit" 
+          size="lg" 
+          disabled={isSubmitting} 
+          className="min-w-[150px] shadow-[0_0_20px_rgba(var(--primary),0.3)] hover:shadow-[0_0_30px_rgba(var(--primary),0.5)] transition-shadow"
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -266,12 +377,12 @@ export function PublishForm() {
           ) : (
             <>
               <UploadCloud className="mr-2 h-4 w-4" />
-              Publish {type === "prompt" ? "Prompt" : "Skill"}
+              Publish {type === "prompt" ? "Skill" : "Prompt"}
             </>
           )}
         </Button>
-      </div>
+      </motion.div>
 
-    </form>
+    </motion.form>
   )
 }

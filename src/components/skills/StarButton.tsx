@@ -3,23 +3,34 @@
 import * as React from "react"
 import { Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toggleStar } from "@/app/actions"
 
 interface StarButtonProps {
+  skillId: string
   initialStars: number
 }
 
-export function StarButton({ initialStars }: StarButtonProps) {
+export function StarButton({ skillId, initialStars }: StarButtonProps) {
   const [hasStarred, setHasStarred] = React.useState(false)
-  const [stars, setStars] = React.useState(initialStars)
+  const [stars, setStars] = React.useState(initialStars || 0)
+  const [isPending, startTransition] = React.useTransition()
 
   const handleToggleStar = () => {
-    if (hasStarred) {
-      setStars(prev => prev - 1)
-      setHasStarred(false)
-    } else {
-      setStars(prev => prev + 1)
-      setHasStarred(true)
-    }
+    const newlyStarred = !hasStarred
+    
+    // Optimistic update
+    setStars(prev => newlyStarred ? prev + 1 : prev - 1)
+    setHasStarred(newlyStarred)
+
+    startTransition(async () => {
+      try {
+        await toggleStar(skillId, !newlyStarred) // passing previous state
+      } catch (_err) {
+        // Revert on error (e.g. RLS failure)
+        setStars(prev => newlyStarred ? prev - 1 : prev + 1)
+        setHasStarred(!newlyStarred)
+      }
+    })
   }
 
   return (
@@ -32,8 +43,9 @@ export function StarButton({ initialStars }: StarButtonProps) {
         <Button 
           variant={hasStarred ? "default" : "outline"} 
           size="sm" 
-          className="h-7 px-2 text-xs rounded-full"
+          className="h-7 px-3 text-xs rounded-full transition-all"
           onClick={handleToggleStar}
+          disabled={isPending}
         >
           {hasStarred ? "Starred" : "Star"}
         </Button>

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Search, Monitor, Moon, Sun, Laptop } from "lucide-react"
+import { Search, Moon, Sun, Laptop } from "lucide-react"
 
 import {
   CommandDialog,

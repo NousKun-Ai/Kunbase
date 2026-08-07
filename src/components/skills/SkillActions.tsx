@@ -3,19 +3,27 @@
 import * as React from "react"
 import { Copy, Download, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { incrementCopies } from "@/app/actions"
 
 interface SkillActionsProps {
+  skillId: string
   content: string
   filename: string
   type?: 'skill' | 'prompt'
 }
 
-export function SkillActions({ content, filename, type = 'skill' }: SkillActionsProps) {
+export function SkillActions({ skillId, content, filename, type = 'skill' }: SkillActionsProps) {
   const [copied, setCopied] = React.useState(false)
+
+  const trackCopy = () => {
+    // Fire and forget
+    incrementCopies(skillId).catch(console.error)
+  }
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content)
     setCopied(true)
+    trackCopy()
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -29,6 +37,7 @@ export function SkillActions({ content, filename, type = 'skill' }: SkillActions
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+    trackCopy()
   }
 
   return (

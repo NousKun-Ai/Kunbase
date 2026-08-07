@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Logo } from "@/components/ui/logo"
 import { HeaderSearchButton } from "./HeaderSearchButton"
 import { UserNav } from "./UserNav"

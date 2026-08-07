@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -6,9 +7,8 @@ import { Link as LinkIcon, Globe, Star, Eye } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { SkillCard } from "@/features/skills/components/SkillCard"
+import { SkillCard, type DatabaseSkill } from "@/features/skills/components/SkillCard"
 import { createClient } from "@/lib/supabase/server"
-import { toMockSkill, type SkillRow } from "@/lib/skills"
 
 async function getProfile(username: string) {
   const supabase = await createClient()
@@ -52,10 +52,13 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
     .eq("owner_id", creator.id)
     .order("created_at", { ascending: false })
 
-  const uniqueSkills = ((skillRows ?? []) as SkillRow[]).map(toMockSkill)
+  const uniqueSkills = ((skillRows ?? []) as any[]).map(skill => ({
+    ...skill,
+    profiles: skill.owner // Supabase join aliased it to owner
+  })) as DatabaseSkill[]
 
-  const totalStars = uniqueSkills.reduce((acc, curr) => acc + curr.stats.stars, 0)
-  const totalViews = uniqueSkills.reduce((acc, curr) => acc + curr.stats.views, 0)
+  const totalStars = uniqueSkills.reduce((acc, curr) => acc + (curr.stars_count || 0), 0)
+  const totalViews = uniqueSkills.reduce((acc, curr) => acc + (curr.views_count || 0), 0)
 
   const publishedSkills = uniqueSkills.filter(s => s.type !== 'prompt')
   const publishedPrompts = uniqueSkills.filter(s => s.type === 'prompt')
@@ -152,20 +155,20 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         
         <TabsContent value="all" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {uniqueSkills.sort((a, b) => b.stats.stars - a.stats.stars).map((skill) => (
-              <SkillCard key={skill.id} skill={skill} />
+            {uniqueSkills.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
+              <SkillCard key={skill.id} skill={skill} index={i} />
             ))}
           </div>
         </TabsContent>
         
         <TabsContent value="skills" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {publishedSkills.sort((a, b) => b.stats.stars - a.stats.stars).map((skill) => (
-              <SkillCard key={skill.id} skill={skill} />
+            {publishedSkills.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
+              <SkillCard key={skill.id} skill={skill} index={i} />
             ))}
             {publishedSkills.length === 0 && (
               <div className="col-span-full py-12 text-center border rounded-xl border-dashed">
-                <p className="text-muted-foreground">This creator hasn't published any skills yet.</p>
+                <p className="text-muted-foreground">This creator hasn&apos;t published any skills yet.</p>
               </div>
             )}
           </div>
@@ -173,12 +176,12 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         
         <TabsContent value="prompts" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {publishedPrompts.sort((a, b) => b.stats.stars - a.stats.stars).map((skill) => (
-              <SkillCard key={skill.id} skill={skill} />
+            {publishedPrompts.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
+              <SkillCard key={skill.id} skill={skill} index={i} />
             ))}
             {publishedPrompts.length === 0 && (
               <div className="col-span-full py-12 text-center border rounded-xl border-dashed">
-                <p className="text-muted-foreground">This creator hasn't published any prompts yet.</p>
+                <p className="text-muted-foreground">This creator hasn&apos;t published any prompts yet.</p>
               </div>
             )}
           </div>

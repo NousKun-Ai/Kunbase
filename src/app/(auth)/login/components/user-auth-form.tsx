@@ -19,7 +19,7 @@ const Github = ({ className }: { className?: string }) => (
   </svg>
 )
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+type UserAuthFormProps = React.HTMLAttributes<HTMLDivElement>
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = React.useState<"github" | "google" | "sso" | null>(null)
