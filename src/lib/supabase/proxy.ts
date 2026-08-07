@@ -6,9 +6,18 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !anonKey) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY env vars'
+    )
+  }
+
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy-project.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy-anon-key',
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
@@ -51,6 +60,15 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/onboarding'
       return NextResponse.redirect(url)
     }
+  }
+
+  // Already-authenticated users hitting /login should be welcomed back, not
+  // shown the sign-in form again.
+  if (user && request.nextUrl.pathname.startsWith('/login')) {
+    const isOnboarded = user.user_metadata?.onboarded === true
+    const url = request.nextUrl.clone()
+    url.pathname = isOnboarded ? '/' : '/onboarding'
+    return NextResponse.redirect(url)
   }
 
   return supabaseResponse

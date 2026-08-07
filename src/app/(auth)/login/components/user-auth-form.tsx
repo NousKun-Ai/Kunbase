@@ -1,11 +1,13 @@
 "use client"
 
 import * as React from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Loader2, Mail, Shield } from "lucide-react"
+import { Loader2, Mail, Shield, Lock, AlertCircle, CheckCircle2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 const Github = ({ className }: { className?: string }) => (
   <svg
@@ -20,16 +22,38 @@ const Github = ({ className }: { className?: string }) => (
 )
 
 type UserAuthFormProps = React.HTMLAttributes<HTMLDivElement>
+type Mode = "signin" | "signup"
+type Loading = "github" | "google" | "sso" | "password" | null
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = React.useState<"github" | "google" | "sso" | null>(null)
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialMode: Mode = searchParams.get("mode") === "signup" ? "signup" : "signin"
+
+  const [mode, setMode] = React.useState<Mode>(initialMode)
+  const [isLoading, setIsLoading] = React.useState<Loading>(null)
   const [ssoDomain, setSsoDomain] = React.useState("")
   const [showSsoInput, setShowSsoInput] = React.useState(false)
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("")
+  const [error, setError] = React.useState<string | null>(
+    searchParams.get("error") === "auth_failed"
+      ? "We couldn't sign you in. Please try again."
+      : null
+  )
+  const [message, setMessage] = React.useState<string | null>(null)
   const supabase = createClient()
 
-  async function onOAuthSubmit(provider: 'github' | 'google') {
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+    setMessage(null)
+  }
+
+  async function onOAuthSubmit(provider: "github" | "google") {
+    setError(null)
     setIsLoading(provider)
-    
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -38,7 +62,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     })
 
     if (error) {
-      console.error(error)
+      setError(error.message)
       setIsLoading(null)
     }
   }
@@ -46,33 +70,178 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   async function onSsoSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!ssoDomain) return
+    setError(null)
     setIsLoading("sso")
 
     const { data, error } = await supabase.auth.signInWithSSO({
       domain: ssoDomain,
       options: {
         redirectTo: `${location.origin}/auth/callback`,
-      }
+      },
     })
 
     if (error) {
-      console.error(error)
+      setError(error.message)
       setIsLoading(null)
     } else if (data?.url) {
-      // Redirect to the Identity Provider
       window.location.href = data.url
     }
   }
 
+  async function onPasswordSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setMessage(null)
+    setIsLoading("password")
+
+    if (mode === "signup") {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+        setIsLoading(null)
+        return
+      }
+
+      // Supabase returns a user with no identities when the email is already
+      // registered, without surfacing it as an error.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError("An account with this email already exists. Try signing in instead.")
+        setIsLoading(null)
+        return
+      }
+
+      if (!data.session) {
+        setMessage("Check your email to confirm your account before signing in.")
+        setIsLoading(null)
+        return
+      }
+
+      router.push("/")
+      router.refresh()
+      return
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError(
+        error.message === "Invalid login credentials"
+          ? "Incorrect email or password."
+          : error.message
+      )
+      setIsLoading(null)
+      return
+    }
+
+    router.push("/")
+    router.refresh()
+  }
+
   return (
     <div className={cn("grid gap-4", className)} {...props}>
-      <Button 
-        variant="outline" 
-        type="button" 
-        disabled={isLoading !== null} 
-        onClick={() => onOAuthSubmit('github')}
+      <div className="grid grid-cols-2 rounded-lg bg-muted p-1 text-sm">
+        <button
+          type="button"
+          onClick={() => switchMode("signin")}
+          className={cn(
+            "rounded-md py-1.5 font-medium transition-all",
+            mode === "signin"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          onClick={() => switchMode("signup")}
+          className={cn(
+            "rounded-md py-1.5 font-medium transition-all",
+            mode === "signup"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Create account
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {message && (
+        <div className="flex items-start gap-2 rounded-md border border-emerald-500/50 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{message}</span>
+        </div>
+      )}
+
+      <form onSubmit={onPasswordSubmit} className="grid gap-3">
+        <div className="grid gap-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={isLoading !== null}
+            required
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isLoading !== null}
+            minLength={6}
+            required
+          />
+        </div>
+        <Button type="submit" disabled={isLoading !== null}>
+          {isLoading === "password" ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Lock className="mr-2 h-4 w-4" />
+          )}{" "}
+          {mode === "signup" ? "Create account" : "Sign in"}
+        </Button>
+      </form>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
+      </div>
+
+      <Button
+        variant="outline"
+        type="button"
+        disabled={isLoading !== null}
+        onClick={() => onOAuthSubmit("github")}
       >
-        {isLoading === 'github' ? (
+        {isLoading === "github" ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Github className="mr-2 h-4 w-4" />
@@ -80,13 +249,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         Continue with GitHub
       </Button>
 
-      <Button 
-        variant="outline" 
-        type="button" 
-        disabled={isLoading !== null} 
-        onClick={() => onOAuthSubmit('google')}
+      <Button
+        variant="outline"
+        type="button"
+        disabled={isLoading !== null}
+        onClick={() => onOAuthSubmit("google")}
       >
-        {isLoading === 'google' ? (
+        {isLoading === "google" ? (
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         ) : (
           <Mail className="mr-2 h-4 w-4" />
@@ -96,30 +265,30 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
       {showSsoInput ? (
         <form onSubmit={onSsoSubmit} className="flex flex-col gap-2 pt-2 border-t">
-          <Input 
-            type="text" 
-            placeholder="Company domain (e.g. acme.com)" 
+          <Input
+            type="text"
+            placeholder="Company domain (e.g. acme.com)"
             value={ssoDomain}
             onChange={(e) => setSsoDomain(e.target.value)}
             disabled={isLoading !== null}
             required
           />
-          <Button 
-            variant="default" 
-            type="submit" 
+          <Button
+            variant="default"
+            type="submit"
             disabled={isLoading !== null || !ssoDomain}
           >
-            {isLoading === 'sso' ? (
+            {isLoading === "sso" ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Shield className="mr-2 h-4 w-4" />
             )}{" "}
             Sign in with SSO
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-xs" 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
             onClick={() => setShowSsoInput(false)}
             type="button"
           >
@@ -127,10 +296,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           </Button>
         </form>
       ) : (
-        <Button 
-          variant="outline" 
-          type="button" 
-          disabled={isLoading !== null} 
+        <Button
+          variant="outline"
+          type="button"
+          disabled={isLoading !== null}
           onClick={() => setShowSsoInput(true)}
         >
           <Shield className="mr-2 h-4 w-4" />
