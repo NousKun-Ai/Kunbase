@@ -21,6 +21,8 @@ export const metadata: Metadata = {
   description: "Discover, publish, copy, and fork Prompts & AI Skills. Built by NousKūn Ai.",
 }
 
+import { SiteLayout } from "@/components/layout/SiteLayout"
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,11 +33,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-transparent font-sans antialiased`}
       >
-        <div className="relative flex min-h-screen flex-col">
-          <Header />
+        <SiteLayout header={<Header />} footer={<Footer />}>
           <PageTransition>{children}</PageTransition>
-          <Footer />
-        </div>
+        </SiteLayout>
         <CommandMenu />
       </body>
     </html>
