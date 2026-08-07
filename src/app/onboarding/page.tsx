@@ -44,7 +44,7 @@ export default function OnboardingPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="role">What best describes you? *</Label>
-                  <Select name="role" value={role} onValueChange={setRole} required>
+                  <Select name="role" value={role} onValueChange={(v) => setRole(v ?? '')} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
@@ -60,7 +60,7 @@ export default function OnboardingPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="referral_source">Where did you hear about us? *</Label>
-                  <Select name="referral_source" value={referral} onValueChange={setReferral} required>
+                  <Select name="referral_source" value={referral} onValueChange={(v) => setReferral(v ?? '')} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select an option" />
                     </SelectTrigger>
