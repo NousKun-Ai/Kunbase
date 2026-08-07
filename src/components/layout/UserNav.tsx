@@ -36,10 +36,12 @@ export function UserNav({ email, username, name, avatarUrl }: UserNavProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Avatar className="h-8 w-8 cursor-pointer border border-border">
-            <AvatarImage src={avatarUrl} alt={name} />
-            <AvatarFallback>{name.charAt(0).toUpperCase() || "U"}</AvatarFallback>
-          </Avatar>
+          <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-primary focus-visible:ring-2 focus-visible:ring-primary">
+            <Avatar className="h-8 w-8 cursor-pointer border border-border transition-opacity hover:opacity-80">
+              <AvatarImage src={avatarUrl} alt={name} />
+              <AvatarFallback>{name.charAt(0).toUpperCase() || "U"}</AvatarFallback>
+            </Avatar>
+          </button>
         }
       />
       <DropdownMenuContent className="w-56" align="end">
