@@ -29,36 +29,16 @@ export default function LoginPage() {
       </div>
       <div className="p-8 h-full flex items-center justify-center bg-background">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-          <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="signin" className="space-y-6">
-              <div className="flex flex-col space-y-2 text-center">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Welcome back
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Continue with GitHub to sign in to your account
-                </p>
-              </div>
-              <UserAuthForm />
-            </TabsContent>
-
-            <TabsContent value="signup" className="space-y-6">
-              <div className="flex flex-col space-y-2 text-center">
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Create an account
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  Continue with GitHub to create your Kunbase account
-                </p>
-              </div>
-              <UserAuthForm />
-            </TabsContent>
-          </Tabs>
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Get Started
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Sign in or create a new account to continue
+            </p>
+          </div>
+          
+          <UserAuthForm />
           
           <p className="px-8 text-center text-sm text-muted-foreground">
             By clicking continue, you agree to our{" "}
