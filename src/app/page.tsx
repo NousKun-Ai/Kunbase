@@ -10,10 +10,6 @@ export default async function HomePage() {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    redirect("/login")
-  }
-
   const [{ data: trendingRows }, { data: recentRows }] = await Promise.all([
     supabase
       .from("skills")
