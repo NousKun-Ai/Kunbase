@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Header } from "@/components/layout/Header"
@@ -33,7 +34,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-transparent font-sans antialiased`}
       >
-        <SiteLayout header={<Header />} footer={<Footer />}>
+        <SiteLayout 
+          header={
+            <Suspense fallback={<div className="h-14 border-b border-border/40 bg-background/95"></div>}>
+              <Header />
+            </Suspense>
+          } 
+          footer={<Footer />}
+        >
           <PageTransition>{children}</PageTransition>
         </SiteLayout>
         <CommandMenu />
