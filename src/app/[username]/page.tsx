@@ -68,7 +68,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
       {/* Profile Header */}
       <div className="flex flex-col md:flex-row gap-8 items-start mb-16">
         <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background shadow-xl">
-          <AvatarImage src={creator.avatar} alt={creator.name} />
+          <AvatarImage src={creator.avatar_url} alt={creator.name} />
           <AvatarFallback className="text-4xl">{creator.name[0]}</AvatarFallback>
         </Avatar>
         
@@ -91,8 +91,8 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
           <p className="text-lg max-w-2xl">{creator.bio}</p>
           
           <div className="flex items-center gap-4 text-sm font-medium">
-            <span className="hover:underline cursor-pointer"><strong className="text-foreground">{creator.followers.toLocaleString()}</strong> <span className="text-muted-foreground font-normal">followers</span></span>
-            <span className="hover:underline cursor-pointer"><strong className="text-foreground">{creator.following.toLocaleString()}</strong> <span className="text-muted-foreground font-normal">following</span></span>
+            <span className="hover:underline cursor-pointer"><strong className="text-foreground">{(creator.followers || 0).toLocaleString()}</strong> <span className="text-muted-foreground font-normal">followers</span></span>
+            <span className="hover:underline cursor-pointer"><strong className="text-foreground">{(creator.following || 0).toLocaleString()}</strong> <span className="text-muted-foreground font-normal">following</span></span>
           </div>
 
           <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground pt-2">
