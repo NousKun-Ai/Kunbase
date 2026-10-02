@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   const isOnboardingRoute = request.nextUrl.pathname.startsWith('/onboarding')
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth') || request.nextUrl.pathname.startsWith('/login')
 
-  if (!user && isProtectedRoute) {
+  if (!user && (isProtectedRoute || isOnboardingRoute)) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

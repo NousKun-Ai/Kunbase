@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://kunbase.space"),
   title: "Kunbase | The Open Registry for Prompts & AI Skills",
   description: "Discover, publish, copy, and fork Prompts & AI Skills. Built by NousKūn Ai.",
 }
