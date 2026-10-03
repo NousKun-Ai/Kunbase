@@ -2,7 +2,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Link as LinkIcon, Globe, Star, Eye } from "lucide-react"
+import { Link as LinkIcon, Globe, Star } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -58,7 +58,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
   })) as DatabaseSkill[]
 
   const totalStars = uniqueSkills.reduce((acc, curr) => acc + (curr.stars_count || 0), 0)
-  const totalViews = uniqueSkills.reduce((acc, curr) => acc + (curr.views_count || 0), 0)
+  
 
   const publishedSkills = uniqueSkills.filter(s => s.type !== 'prompt')
   const publishedPrompts = uniqueSkills.filter(s => s.type === 'prompt')
@@ -118,12 +118,6 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
               <span className="font-bold text-xl">{totalStars.toLocaleString()}</span>
               <span className="text-xs text-muted-foreground uppercase tracking-wider flex items-center">
                 <Star className="h-3 w-3 mr-1" /> Total Stars
-              </span>
-            </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-xl">{totalViews.toLocaleString()}</span>
-              <span className="text-xs text-muted-foreground uppercase tracking-wider flex items-center">
-                <Eye className="h-3 w-3 mr-1" /> Total Views
               </span>
             </div>
           </div>

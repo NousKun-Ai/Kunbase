@@ -11,7 +11,6 @@ export interface SkillRow {
   content: string
   visibility: "public" | "private"
   stars_count: number
-  views_count: number
   copies_count: number
   created_at: string
   owner: {
@@ -40,7 +39,6 @@ export function toMockSkill(row: SkillRow): MockSkill {
     stats: {
       stars: row.stars_count,
       copies: row.copies_count,
-      views: row.views_count,
     },
   }
 }

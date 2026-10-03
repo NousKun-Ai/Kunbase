@@ -7,7 +7,7 @@ import { SkillActions } from "@/components/skills/SkillActions"
 import { StarButton } from "@/components/skills/StarButton"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Eye, Calendar, Tag, Sparkles, Code2 } from "lucide-react"
+import { Copy, Calendar, Tag, Sparkles, Code2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import type { DatabaseSkill } from "@/features/skills/components/SkillCard"
 
@@ -119,10 +119,6 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
               <div className="flex items-center justify-between pt-2 border-t border-white/5">
                 <span className="text-muted-foreground flex items-center text-sm"><Copy className="mr-2 h-4 w-4" /> Copies</span>
                 <span className="font-medium">{displaySkill.copies_count?.toLocaleString() || 0}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground flex items-center text-sm"><Eye className="mr-2 h-4 w-4" /> Views</span>
-                <span className="font-medium">{displaySkill.views_count?.toLocaleString() || 0}</span>
               </div>
             </div>
 

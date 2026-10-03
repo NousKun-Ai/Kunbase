@@ -23,7 +23,6 @@ export interface MockSkill {
   stats: {
     stars: number
     copies: number
-    views: number
   }
   type?: 'skill' | 'prompt'
   content?: string
@@ -72,7 +71,7 @@ export const TRENDING_SKILLS: MockSkill[] = [
       username: 'sofiadavis',
       avatar: 'https://github.com/shadcn.png'
     },
-    stats: { stars: 1205, copies: 4500, views: 12500 },
+    stats: { stars: 1205, copies: 4500 },
     createdAt: '2026-07-20T10:00:00Z',
     content: `# Next.js App Router Master Prompt
 
@@ -110,7 +109,7 @@ export const RECENT_SKILLS: MockSkill[] = [
       username: 'alexc',
       avatar: 'https://github.com/shadcn.png'
     },
-    stats: { stars: 850, copies: 3200, views: 9000 },
+    stats: { stars: 850, copies: 3200 },
     createdAt: new Date().toISOString(),
     content: `# Senior Frontend Engineer Persona
 

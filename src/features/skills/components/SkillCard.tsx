@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Star, Copy, Eye, Sparkles, Code2 } from "lucide-react"
+import { Star, Copy, Sparkles, Code2 } from "lucide-react"
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ export interface DatabaseSkill {
   tags: string[]
   type: string
   stars_count: number
-  views_count: number
   copies_count: number
   profiles: {
     username: string
@@ -100,10 +99,6 @@ export function SkillCard({ skill, index = 0, isTrending = false }: SkillCardPro
                 {skill.copies_count?.toLocaleString() || 0}
               </span>
             </div>
-            <span className="flex items-center opacity-70">
-              <Eye className="mr-1.5 h-3.5 w-3.5" />
-              {skill.views_count?.toLocaleString() || 0}
-            </span>
           </CardFooter>
           
         </Card>
