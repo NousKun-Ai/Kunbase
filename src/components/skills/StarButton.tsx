@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toggleStar } from "@/app/actions"
@@ -14,6 +15,11 @@ export function StarButton({ skillId, initialStars }: StarButtonProps) {
   const [hasStarred, setHasStarred] = React.useState(false)
   const [stars, setStars] = React.useState(initialStars || 0)
   const [isPending, startTransition] = React.useTransition()
+  const router = useRouter()
+
+  React.useEffect(() => {
+    setStars(initialStars || 0)
+  }, [initialStars])
 
   const handleToggleStar = () => {
     const newlyStarred = !hasStarred
@@ -25,6 +31,7 @@ export function StarButton({ skillId, initialStars }: StarButtonProps) {
     startTransition(async () => {
       try {
         await toggleStar(skillId, !newlyStarred) // passing previous state
+        router.refresh()
       } catch (_err) {
         // Revert on error (e.g. RLS failure)
         setStars(prev => newlyStarred ? prev - 1 : prev + 1)

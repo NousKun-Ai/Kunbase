@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Copy, Download, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { incrementCopies } from "@/app/actions"
@@ -14,10 +15,15 @@ interface SkillActionsProps {
 
 export function SkillActions({ skillId, content, filename, type = 'skill' }: SkillActionsProps) {
   const [copied, setCopied] = React.useState(false)
+  const router = useRouter()
 
-  const trackCopy = () => {
-    // Fire and forget
-    incrementCopies(skillId).catch(console.error)
+  const trackCopy = async () => {
+    try {
+      await incrementCopies(skillId)
+      router.refresh()
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   const handleCopy = () => {
