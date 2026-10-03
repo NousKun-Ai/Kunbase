@@ -100,18 +100,20 @@ export default async function HomePage() {
       </section>
 
       {/* Community Stats CTA */}
-      <section className="py-24 md:py-32 border-t text-center">
-        <div className="container mx-auto px-4 md:px-8 max-w-3xl">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Join the Registry</h2>
-          <p className="text-muted-foreground text-lg mb-10">
-            Join thousands of developers sharing and discovering the best AI architectures and skills.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" className="w-full sm:w-auto">Create an Account</Button>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto">Explore Skills</Button>
+      {!user && (
+        <section className="py-24 md:py-32 border-t text-center">
+          <div className="container mx-auto px-4 md:px-8 max-w-3xl">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">Join the Registry</h2>
+            <p className="text-muted-foreground text-lg mb-10">
+              Join thousands of developers sharing and discovering the best AI architectures and skills.
+            </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button size="lg" className="w-full sm:w-auto">Create an Account</Button>
+              <Button size="lg" variant="outline" className="w-full sm:w-auto">Explore Skills</Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   )
 }
