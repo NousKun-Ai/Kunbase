@@ -20,7 +20,7 @@ interface DeleteSkillDialogProps {
   skillTitle: string
   skillType?: "skill" | "prompt"
   username: string
-  variant?: "button" | "danger-zone"
+  variant?: "button" | "danger-zone" | "icon"
   className?: string
 }
 
@@ -52,9 +52,12 @@ export function DeleteSkillDialog({
       }
 
       setOpen(false)
-      // Redirect to the creator's profile page
-      router.push(`/${username}`)
+      // Refresh cache so the item disappears immediately
       router.refresh()
+      // If currently on the skill's detail page, redirect back to the user's profile
+      if (typeof window !== "undefined" && window.location.pathname.includes(`/${username}/`)) {
+        router.push(`/${username}`)
+      }
     } catch (err) {
       console.error("Error deleting skill:", err)
       setError("An unexpected error occurred while deleting. Please try again.")
@@ -74,6 +77,16 @@ export function DeleteSkillDialog({
             >
               <Trash2 className="w-3.5 h-3.5 mr-2 shrink-0" />
               Delete this {typeLabel}
+            </Button>
+          ) : variant === "icon" ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className={`h-7 px-2 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors gap-1.5 ${className}`}
+            >
+              <Trash2 className="w-3.5 h-3.5 text-red-400/80" />
+              Delete
             </Button>
           ) : (
             <Button

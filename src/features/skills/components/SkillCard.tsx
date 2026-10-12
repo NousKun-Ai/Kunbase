@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
+import { DeleteSkillDialog } from "@/components/skills/DeleteSkillDialog"
 
 // Matches the Supabase DB join structure
 export interface DatabaseSkill {
@@ -31,9 +32,10 @@ interface SkillCardProps {
   skill: DatabaseSkill
   index?: number
   isTrending?: boolean
+  isOwner?: boolean
 }
 
-export function SkillCard({ skill, index = 0, isTrending = false }: SkillCardProps) {
+export function SkillCard({ skill, index = 0, isTrending = false, isOwner = false }: SkillCardProps) {
   const profile = Array.isArray(skill.profiles) ? skill.profiles[0] : skill.profiles
 
   return (
@@ -101,6 +103,24 @@ export function SkillCard({ skill, index = 0, isTrending = false }: SkillCardPro
                 {skill.copies_count?.toLocaleString() || 0}
               </span>
             </div>
+
+            {isOwner && (
+              <div
+                className="relative z-20"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+              >
+                <DeleteSkillDialog
+                  skillId={skill.id}
+                  skillTitle={skill.title}
+                  skillType={skill.type as "skill" | "prompt"}
+                  username={profile?.username || ""}
+                  variant="icon"
+                />
+              </div>
+            )}
           </CardFooter>
           
         </Card>

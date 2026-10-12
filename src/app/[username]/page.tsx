@@ -150,7 +150,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         <TabsContent value="all" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {uniqueSkills.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
-              <SkillCard key={skill.id} skill={skill} index={i} />
+              <SkillCard key={skill.id} skill={skill} index={i} isOwner={isOwner} />
             ))}
           </div>
         </TabsContent>
@@ -158,7 +158,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         <TabsContent value="skills" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {publishedSkills.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
-              <SkillCard key={skill.id} skill={skill} index={i} />
+              <SkillCard key={skill.id} skill={skill} index={i} isOwner={isOwner} />
             ))}
             {publishedSkills.length === 0 && (
               <div className="col-span-full py-12 text-center border rounded-xl border-dashed">
@@ -171,7 +171,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         <TabsContent value="prompts" className="mt-0">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {publishedPrompts.sort((a, b) => b.stars_count - a.stars_count).map((skill, i) => (
-              <SkillCard key={skill.id} skill={skill} index={i} />
+              <SkillCard key={skill.id} skill={skill} index={i} isOwner={isOwner} />
             ))}
             {publishedPrompts.length === 0 && (
               <div className="col-span-full py-12 text-center border rounded-xl border-dashed">
