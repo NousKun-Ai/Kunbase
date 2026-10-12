@@ -170,18 +170,24 @@ const WARNING_THREAT_PATTERNS: Array<{
 ]
 
 /**
- * Normalizes text to filter out defensive code declarations and regex literals
+ * Normalizes text to filter out defensive code declarations, markdown table rules, and regex literals
  * so that security tools, linters, and audit rules aren't flagged as live executable malware.
  */
 function normalizeForExecutableScanning(text: string): string {
   return text
-    // Replace markdown table cells with regex literals: | ... | /pattern/ | ... |
-    .replace(/\|\s*\/[^/\n]+\/[a-z]*\s*\|/gi, "| [SECURITY_REGEX] |")
-    // Replace JS/TS regex property assignments: pattern: /.../i or regex: /.../i
+    // 1. Strip markdown table rows (starts with | and contains |)
+    .replace(/^\|.*\|.*$/gm, "| [DEFENSIVE_TABLE_ROW] |")
+    // 2. Strip inline backtick regex literals: `/\b.../i`
+    .replace(/`\/.*?\/[a-z]*`/gi, "`[SECURITY_REGEX]`")
+    // 3. Strip placeholder commands with ellipses or brackets: curl ... | bash, wget <url> | sh
+    .replace(/\b(curl|wget)\s+(\.{2,}|<[^>\n]+>|\$URL)\s*(\|\s*(sudo\s+)?(bash|sh|zsh))\b/gi, "[PLACEHOLDER_COMMAND]")
+    // 4. Strip placeholder PowerShell expressions: PowerShell `DownloadString | IEX` or PowerShell ... IEX
+    .replace(/\bpowershell(\.exe)?\s+`?(DownloadString\s*\|\s*IEX|\.{2,}|<[^>\n]+>)`?/gi, "[PLACEHOLDER_POWERSHELL]")
+    // 5. Strip JS/TS regex property assignments: pattern: /.../i or regex: /.../i
     .replace(/(pattern|regex|rule)\s*:\s*\/[^/\n]+\/[a-z]*/gi, "$1: [SECURITY_REGEX]")
-    // Replace variable regex assignments: const x = /.../i
+    // 6. Strip variable regex assignments: const x = /.../i
     .replace(/(const|let|var)\s+[a-zA-Z0-9_]+\s*=\s*\/[^/\n]+\/[a-z]*/gi, "$1 [SECURITY_REGEX]")
-    // Replace new RegExp(...)
+    // 7. Strip new RegExp(...)
     .replace(/new\s+RegExp\([^)]+\)/gi, "[SECURITY_REGEX]")
 }
 
@@ -211,16 +217,8 @@ export function scanContentForThreats(
           message: threat.message,
           snippet: executableMatch[0].slice(0, 100),
         })
-      } else {
-        // Pattern exists solely inside a regex definition (defensive rule / linter)
-        issues.push({
-          severity: "warning",
-          category: threat.category,
-          rule: `${threat.rule}_defensive_rule`,
-          message: `Defensive rule or security scanner signature detected (${threat.rule}).`,
-          snippet: rawMatch[0].slice(0, 100),
-        })
       }
+      // If only matching in defensive table or regex definition, ignore to avoid false alarms
     }
   }
 

@@ -349,36 +349,60 @@ export function PublishForm() {
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`p-3 rounded-xl border text-xs flex flex-col gap-2 ${
-                securityReport.hasCritical
-                  ? "bg-red-500/10 border-red-500/30 text-red-300"
+              className={`p-3 rounded-xl border text-xs flex flex-col gap-2.5 ${
+                confirmedSafe
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-300"
+                  : securityReport.hasCritical
+                  ? "bg-amber-500/10 border-amber-500/30 text-amber-200"
                   : "bg-amber-500/10 border-amber-500/30 text-amber-300"
               }`}
             >
-              <div className="flex items-center gap-2 font-semibold">
-                {securityReport.hasCritical ? (
-                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-semibold">
+                  {confirmedSafe ? (
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : securityReport.hasCritical ? (
+                    <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                  )}
+                  <span>
+                    {confirmedSafe
+                      ? "Security Verified: You verified this content is safe (defensive security / documentation)."
+                      : securityReport.hasCritical
+                      ? "Security Advisory: Sensitive command syntax detected (Verification required to publish)"
+                      : "Security Notice: Potentially sensitive pattern detected"}
+                  </span>
+                </div>
+
+                {!confirmedSafe && securityReport.hasCritical && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowSecurityConfirmation(true)}
+                    className="h-6 px-2 text-[11px] bg-amber-500/15 border-amber-500/40 text-amber-200 hover:bg-amber-500/25 shrink-0"
+                  >
+                    <ShieldCheck className="w-3 h-3 mr-1 text-amber-400" />
+                    Verify to Publish
+                  </Button>
                 )}
-                <span>
-                  {securityReport.hasCritical
-                    ? "Security Alert: High-risk command or exploit detected (Publication blocked)"
-                    : "Security Notice: Potentially sensitive pattern detected"}
-                </span>
               </div>
-              <ul className="list-disc list-inside space-y-1 pl-1 text-[11px]">
-                {securityReport.issues.map((issue, idx) => (
-                  <li key={idx}>
-                    <span className="font-medium">{issue.message}</span>
-                    {issue.snippet && (
-                      <code className="ml-1.5 px-1.5 py-0.5 bg-black/40 rounded text-[10px] font-mono text-white/90">
-                        {issue.snippet}
-                      </code>
-                    )}
-                  </li>
-                ))}
-              </ul>
+
+              {!confirmedSafe && (
+                <ul className="list-disc list-inside space-y-1 pl-1 text-[11px] text-amber-200/80">
+                  {securityReport.issues.map((issue, idx) => (
+                    <li key={idx}>
+                      <span className="font-medium">{issue.message}</span>
+                      {issue.snippet && (
+                        <code className="ml-1.5 px-1.5 py-0.5 bg-black/40 rounded text-[10px] font-mono text-white/90">
+                          {issue.snippet}
+                        </code>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </motion.div>
           )}
 
@@ -397,10 +421,15 @@ export function PublishForm() {
               </div>
 
               {content.trim() ? (
-                securityReport.hasCritical ? (
-                  <div className="flex items-center gap-1.5 text-red-400 font-sans text-[11px] bg-red-500/15 px-2.5 py-0.5 rounded-full border border-red-500/30">
-                    <ShieldAlert className="w-3 h-3 text-red-400" />
-                    <span>Exploit Blocked</span>
+                confirmedSafe ? (
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-sans text-[11px] bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span>Verified Safe</span>
+                  </div>
+                ) : securityReport.hasCritical ? (
+                  <div className="flex items-center gap-1.5 text-amber-400 font-sans text-[11px] bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    <ShieldAlert className="w-3 h-3 text-amber-400" />
+                    <span>Verification Required</span>
                   </div>
                 ) : securityReport.hasWarnings ? (
                   <div className="flex items-center gap-1.5 text-amber-400 font-sans text-[11px] bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30">
@@ -415,6 +444,7 @@ export function PublishForm() {
                 )
               ) : null}
             </div>
+
             
             <AnimatePresence mode="wait">
               {editorMode === "edit" ? (
