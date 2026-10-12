@@ -6,9 +6,10 @@ import { MarkdownViewer } from "@/components/skills/MarkdownViewer"
 import { SkillActions } from "@/components/skills/SkillActions"
 import { StarButton } from "@/components/skills/StarButton"
 import { ReportSkillDialog } from "@/components/skills/ReportSkillDialog"
+import { DeleteSkillDialog } from "@/components/skills/DeleteSkillDialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Calendar, Tag, Sparkles, Code2, ShieldCheck, AlertTriangle } from "lucide-react"
+import { Copy, Calendar, Tag, Sparkles, Code2, ShieldCheck, AlertTriangle, Trash2 } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import type { DatabaseSkill } from "@/features/skills/components/SkillCard"
 import { containsTerminalCommands } from "@/lib/security"
@@ -133,7 +134,15 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
               
               <div className="hidden sm:block w-px h-10 bg-white/10"></div>
               
-              <SkillActions skillId={displaySkill.id} content={content} filename={`${displaySkill.slug}.md`} type={displaySkill.type as "skill" | "prompt"} />
+              <SkillActions
+                skillId={displaySkill.id}
+                content={content}
+                filename={`${displaySkill.slug}.md`}
+                type={displaySkill.type as "skill" | "prompt"}
+                isOwner={isOwner}
+                skillTitle={displaySkill.title}
+                username={profile?.username || ""}
+              />
             </div>
           </div>
 
@@ -229,6 +238,25 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
                 </div>
               </div>
             </div>
+
+            {/* Owner Danger Zone */}
+            {isOwner && (
+              <div className="pt-6 border-t border-red-500/20 space-y-3">
+                <h3 className="font-semibold text-xs flex items-center text-red-400 uppercase tracking-wider">
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Danger Zone
+                </h3>
+                <p className="text-[11px] leading-relaxed text-muted-foreground/80">
+                  Permanently delete this {displaySkill.type} from Kunbase.
+                </p>
+                <DeleteSkillDialog
+                  skillId={displaySkill.id}
+                  skillTitle={displaySkill.title}
+                  skillType={displaySkill.type as "skill" | "prompt"}
+                  username={profile?.username || ""}
+                  variant="danger-zone"
+                />
+              </div>
+            )}
 
           </div>
         </div>

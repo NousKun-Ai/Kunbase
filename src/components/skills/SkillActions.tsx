@@ -6,14 +6,27 @@ import { Copy, Download, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { incrementCopies } from "@/app/actions"
 
+import { DeleteSkillDialog } from "@/components/skills/DeleteSkillDialog"
+
 interface SkillActionsProps {
   skillId: string
   content: string
   filename: string
   type?: 'skill' | 'prompt'
+  isOwner?: boolean
+  skillTitle?: string
+  username?: string
 }
 
-export function SkillActions({ skillId, content, filename, type = 'skill' }: SkillActionsProps) {
+export function SkillActions({
+  skillId,
+  content,
+  filename,
+  type = 'skill',
+  isOwner = false,
+  skillTitle = '',
+  username = '',
+}: SkillActionsProps) {
   const [copied, setCopied] = React.useState(false)
   const router = useRouter()
 
@@ -47,7 +60,7 @@ export function SkillActions({ skillId, content, filename, type = 'skill' }: Ski
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <Button onClick={handleCopy} className="flex-1 sm:flex-none">
         {copied ? (
           <Check className="mr-2 h-4 w-4" />
@@ -61,6 +74,14 @@ export function SkillActions({ skillId, content, filename, type = 'skill' }: Ski
           <Download className="mr-2 h-4 w-4" />
           Download .md
         </Button>
+      )}
+      {isOwner && (
+        <DeleteSkillDialog
+          skillId={skillId}
+          skillTitle={skillTitle || filename}
+          skillType={type}
+          username={username}
+        />
       )}
     </div>
   )

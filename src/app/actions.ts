@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { reportRateLimiter, publishRateLimiter } from "@/lib/rate-limit"
 import { scanContentForThreats, MAX_CONTENT_CHARS } from "@/lib/security"
@@ -223,6 +224,62 @@ export async function moderateSkillAction({
   }
 
   return { success: true, status: newStatus }
+}
+
+export async function deleteSkillAction(skillId: string) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: "You must be signed in to delete a prompt or skill." }
+  }
+
+  // 1. Fetch skill to verify ownership
+  const { data: skill, error: fetchError } = await supabase
+    .from("skills")
+    .select("id, owner_id, slug, type, title")
+    .eq("id", skillId)
+    .single()
+
+  if (fetchError || !skill) {
+    return { error: "The requested prompt or skill could not be found." }
+  }
+
+  if (skill.owner_id !== user.id) {
+    return { error: "Unauthorized: You can only delete content that you uploaded." }
+  }
+
+  // 2. Fetch owner profile for revalidation & redirect target
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single()
+
+  // 3. Delete the skill (RLS policy enforces owner delete; CASCADE drops reports)
+  const { error: deleteError } = await supabase
+    .from("skills")
+    .delete()
+    .eq("id", skillId)
+    .eq("owner_id", user.id)
+
+  if (deleteError) {
+    console.error("Delete skill error:", deleteError)
+    return { error: "Failed to delete from the database. Please try again." }
+  }
+
+  // 4. Invalidate relevant caches
+  revalidatePath("/")
+  revalidatePath("/explore")
+  revalidatePath("/trending")
+  if (profile?.username) {
+    revalidatePath(`/${profile.username}`)
+    revalidatePath(`/${profile.username}/${skill.slug}`)
+  }
+
+  return { success: true, username: profile?.username || "" }
 }
 
 
