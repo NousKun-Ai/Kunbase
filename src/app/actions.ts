@@ -100,6 +100,7 @@ export async function publishSkillAction(formData: {
   type: "prompt" | "skill"
   content: string
   visibility: "public" | "private"
+  confirmedSafe?: boolean
 }) {
   const supabase = await createClient()
   const {
@@ -131,12 +132,15 @@ export async function publishSkillAction(formData: {
 
   // 3. Server-side Threat Scanning (Defense in depth)
   const scan = scanContentForThreats(formData.content, formData.title, formData.description)
-  if (scan.hasCritical) {
+  if (scan.hasCritical && !formData.confirmedSafe) {
     const critical = scan.issues.find((i) => i.severity === "critical")
     return {
-      error: `Security Block: ${critical?.message || "Dangerous command or exploit pattern detected."}`,
+      needsConfirmation: true,
+      error: `Security Verification Required: ${critical?.message || "Dangerous command or exploit pattern detected."}`,
+      issues: scan.issues,
     }
   }
+
 
   // 4. Fetch profile for redirect slug
   const { data: profile } = await supabase

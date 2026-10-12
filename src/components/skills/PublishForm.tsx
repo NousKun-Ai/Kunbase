@@ -20,6 +20,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { createClient } from "@/lib/supabase/client"
 import { slugify } from "@/lib/utils"
 import { publishSkillAction } from "@/app/actions"
@@ -53,6 +61,8 @@ export function PublishForm() {
   
   const [isDragging, setIsDragging] = React.useState(false)
   const [editorMode, setEditorMode] = React.useState<"edit" | "preview">("edit")
+  const [showSecurityConfirmation, setShowSecurityConfirmation] = React.useState(false)
+  const [confirmedSafe, setConfirmedSafe] = React.useState(false)
 
   // Real-time security analysis on prompt & skill content
   const securityReport = React.useMemo<SecurityScanReport>(() => {
@@ -112,7 +122,7 @@ export function PublishForm() {
         // 5. Automated threat check
         const scan = scanContentForThreats(text, title, description)
         if (scan.hasCritical) {
-          setError(`Security Alert: Detected high-risk instruction or exploit (${scan.issues[0]?.message}). Please remove dangerous commands.`)
+          setError(`Security Notice: Detected shell syntax or security pattern (${scan.issues[0]?.message}). You will be prompted to verify defensive intent upon publishing.`)
         }
       }
     }
@@ -136,25 +146,9 @@ export function PublishForm() {
     if (file) readFile(file)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const executePublish = async (isConfirmed = false) => {
     setError(null)
     setIsSubmitting(true)
-
-    // Pre-submission client validation
-    if (content.length > MAX_CONTENT_CHARS) {
-      setError(`Content exceeds maximum allowed limit of ${MAX_CONTENT_CHARS.toLocaleString()} characters.`)
-      setIsSubmitting(false)
-      return
-    }
-
-    const scan = scanContentForThreats(content, title, description)
-    if (scan.hasCritical) {
-      const issue = scan.issues.find(i => i.severity === "critical")
-      setError(`Security Block: ${issue?.message || "Dangerous command or exploit pattern detected."} Malicious code cannot be published to the registry.`)
-      setIsSubmitting(false)
-      return
-    }
 
     const parsedTags = tags
       .split(",")
@@ -169,9 +163,15 @@ export function PublishForm() {
       type,
       content,
       visibility,
+      confirmedSafe: isConfirmed,
     })
 
     setIsSubmitting(false)
+
+    if (res.needsConfirmation) {
+      setShowSecurityConfirmation(true)
+      return
+    }
 
     if (res.error) {
       setError(res.error)
@@ -182,6 +182,26 @@ export function PublishForm() {
       router.push(`/${res.username}/${res.slug}`)
     }
   }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+
+    // Pre-submission client validation
+    if (content.length > MAX_CONTENT_CHARS) {
+      setError(`Content exceeds maximum allowed limit of ${MAX_CONTENT_CHARS.toLocaleString()} characters.`)
+      return
+    }
+
+    const scan = scanContentForThreats(content, title, description)
+    if (scan.hasCritical && !confirmedSafe) {
+      setShowSecurityConfirmation(true)
+      return
+    }
+
+    await executePublish(confirmedSafe)
+  }
+
 
 
   return (
@@ -492,6 +512,87 @@ export function PublishForm() {
         </Button>
       </motion.div>
 
+      {/* Security Confirmation Modal for Defensive / Educational Prompts */}
+      <Dialog open={showSecurityConfirmation} onOpenChange={setShowSecurityConfirmation}>
+        <DialogContent className="sm:max-w-lg bg-background/95 backdrop-blur-xl border-white/10">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5 text-amber-400 mb-1">
+              <ShieldAlert className="w-5 h-5 shrink-0" />
+              <DialogTitle className="text-lg font-bold">Security Verification Notice</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
+              Kunbase detected shell command syntax or exploit signatures in your prompt.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 my-2">
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs space-y-2">
+              <p className="font-semibold text-amber-300">Flagged Security Patterns:</p>
+              <ul className="list-disc list-inside space-y-1 text-amber-200/80">
+                {securityReport.issues.slice(0, 4).map((issue, idx) => (
+                  <li key={idx}>
+                    <span className="font-medium">{issue.message}</span>
+                    {issue.snippet && (
+                      <code className="ml-1 px-1 py-0.5 bg-black/40 rounded text-[10px] font-mono text-white/90">
+                        {issue.snippet}
+                      </code>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              If this prompt is an AI architecture, defensive security linter, code audit rule, or educational guide, you may verify and proceed with publishing.
+            </p>
+
+            <label className="flex items-start gap-3 p-3 rounded-lg border border-white/10 bg-black/20 cursor-pointer hover:bg-black/30 transition-colors">
+              <input
+                type="checkbox"
+                checked={confirmedSafe}
+                onChange={(e) => setConfirmedSafe(e.target.checked)}
+                className="mt-0.5 rounded border-white/20 bg-background text-primary focus:ring-primary"
+              />
+              <span className="text-xs leading-normal select-none">
+                <strong className="text-white">I confirm this content is safe:</strong> It consists of defensive rules, educational documentation, or safe developer instructions, and does not execute malicious attacks.
+              </span>
+            </label>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSecurityConfirmation(false)}
+            >
+              Back to Edit
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!confirmedSafe || isSubmitting}
+              onClick={() => {
+                setShowSecurityConfirmation(false)
+                executePublish(true)
+              }}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium gap-1.5"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Publishing...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5" /> Confirm & Publish
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </motion.form>
   )
 }
+

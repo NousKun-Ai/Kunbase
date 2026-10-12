@@ -170,6 +170,22 @@ const WARNING_THREAT_PATTERNS: Array<{
 ]
 
 /**
+ * Normalizes text to filter out defensive code declarations and regex literals
+ * so that security tools, linters, and audit rules aren't flagged as live executable malware.
+ */
+function normalizeForExecutableScanning(text: string): string {
+  return text
+    // Replace markdown table cells with regex literals: | ... | /pattern/ | ... |
+    .replace(/\|\s*\/[^/\n]+\/[a-z]*\s*\|/gi, "| [SECURITY_REGEX] |")
+    // Replace JS/TS regex property assignments: pattern: /.../i or regex: /.../i
+    .replace(/(pattern|regex|rule)\s*:\s*\/[^/\n]+\/[a-z]*/gi, "$1: [SECURITY_REGEX]")
+    // Replace variable regex assignments: const x = /.../i
+    .replace(/(const|let|var)\s+[a-zA-Z0-9_]+\s*=\s*\/[^/\n]+\/[a-z]*/gi, "$1 [SECURITY_REGEX]")
+    // Replace new RegExp(...)
+    .replace(/new\s+RegExp\([^)]+\)/gi, "[SECURITY_REGEX]")
+}
+
+/**
  * Scans markdown / prompt content and returns detailed security issues
  */
 export function scanContentForThreats(
@@ -178,19 +194,33 @@ export function scanContentForThreats(
   description = ""
 ): SecurityScanReport {
   const combinedText = `${title}\n${description}\n${content}`
+  const normalizedText = normalizeForExecutableScanning(combinedText)
   const issues: SecurityIssue[] = []
 
-  // 1. Critical pattern scans (Blocks submission)
+  // 1. Critical pattern scans
   for (const threat of CRITICAL_THREAT_PATTERNS) {
-    const match = combinedText.match(threat.pattern)
-    if (match) {
-      issues.push({
-        severity: "critical",
-        category: threat.category,
-        rule: threat.rule,
-        message: threat.message,
-        snippet: match[0].slice(0, 100),
-      })
+    const rawMatch = combinedText.match(threat.pattern)
+    if (rawMatch) {
+      // Check if this pattern is an executable instruction vs defensive regex definition
+      const executableMatch = normalizedText.match(threat.pattern)
+      if (executableMatch) {
+        issues.push({
+          severity: "critical",
+          category: threat.category,
+          rule: threat.rule,
+          message: threat.message,
+          snippet: executableMatch[0].slice(0, 100),
+        })
+      } else {
+        // Pattern exists solely inside a regex definition (defensive rule / linter)
+        issues.push({
+          severity: "warning",
+          category: threat.category,
+          rule: `${threat.rule}_defensive_rule`,
+          message: `Defensive rule or security scanner signature detected (${threat.rule}).`,
+          snippet: rawMatch[0].slice(0, 100),
+        })
+      }
     }
   }
 
