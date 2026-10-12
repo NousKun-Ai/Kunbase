@@ -24,12 +24,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const { data: skills } = await supabase
     .from("skills")
-    .select("slug, owner_id, created_at")
+    .select("slug, owner_id, created_at, security_status")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(5000)
 
-  const rawSkills = skills || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawSkills = (skills || []).filter((s: any) => s.security_status !== "quarantined")
+
   const ownerIds = [...new Set(rawSkills.map(s => s.owner_id))]
   const { data: profiles } = ownerIds.length > 0
     ? await supabase.from("profiles").select("id, username").in("id", ownerIds)

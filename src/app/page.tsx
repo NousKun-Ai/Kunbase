@@ -25,15 +25,20 @@ export default async function HomePage() {
       .limit(8),
   ])
 
-  const TRENDING_SKILLS = ((trendingRows ?? []) as any[]).map(skill => ({
-    ...skill,
-    profiles: skill.owner
-  })) as DatabaseSkill[]
+  const TRENDING_SKILLS = ((trendingRows ?? []) as any[])
+    .filter((skill) => skill.security_status !== "quarantined")
+    .map(skill => ({
+      ...skill,
+      profiles: skill.owner
+    })) as DatabaseSkill[]
   
-  const RECENT_SKILLS = ((recentRows ?? []) as any[]).map(skill => ({
-    ...skill,
-    profiles: skill.owner
-  })) as DatabaseSkill[]
+  const RECENT_SKILLS = ((recentRows ?? []) as any[])
+    .filter((skill) => skill.security_status !== "quarantined")
+    .map(skill => ({
+      ...skill,
+      profiles: skill.owner
+    })) as DatabaseSkill[]
+
 
   return (
     <div className="flex flex-col">

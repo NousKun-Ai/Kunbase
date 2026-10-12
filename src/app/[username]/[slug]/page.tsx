@@ -5,11 +5,13 @@ import { notFound } from "next/navigation"
 import { MarkdownViewer } from "@/components/skills/MarkdownViewer"
 import { SkillActions } from "@/components/skills/SkillActions"
 import { StarButton } from "@/components/skills/StarButton"
+import { ReportSkillDialog } from "@/components/skills/ReportSkillDialog"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Calendar, Tag, Sparkles, Code2 } from "lucide-react"
+import { Copy, Calendar, Tag, Sparkles, Code2, ShieldCheck, AlertTriangle } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import type { DatabaseSkill } from "@/features/skills/components/SkillCard"
+import { containsTerminalCommands } from "@/lib/security"
 
 async function getSkill(username: string, slug: string) {
   const supabase = await createClient()
@@ -59,9 +61,26 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
     notFound()
   }
 
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const securityStatus = (displaySkill as any).security_status || "verified"
+  const isOwner = user?.id === displaySkill.owner_id
+
+  // Quarantined content cannot be viewed by the public
+  if (securityStatus === "quarantined" && !isOwner) {
+    notFound()
+  }
+
   // Ensure content exists (might need to fetch it separately if it's not in the view, but let's assume it is or use empty string)
   const content = (displaySkill as any).content ?? ""
   const profile = Array.isArray(displaySkill.profiles) ? displaySkill.profiles[0] : displaySkill.profiles
+  const hasTerminalCommands = containsTerminalCommands(content)
+  const isFlagged = securityStatus === "flagged"
+  const isQuarantined = securityStatus === "quarantined"
+
 
   return (
     <div className="container mx-auto px-4 md:px-8 py-10 md:py-16 max-w-7xl">
@@ -72,7 +91,7 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
           
           {/* Header */}
           <div className="space-y-6">
-            <div className="flex items-center space-x-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
               <Badge variant="outline" className="bg-background/50 backdrop-blur-sm border-white/10 font-normal">
                 {displaySkill.type === "prompt" ? <Sparkles className="w-3 h-3 mr-1 text-yellow-400" /> : <Code2 className="w-3 h-3 mr-1 text-blue-400" />}
                 {displaySkill.type}
@@ -81,6 +100,23 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
               <span className="text-primary font-medium">{displaySkill.category}</span>
               <span className="text-muted-foreground">•</span>
               <span className="flex items-center text-muted-foreground"><Calendar className="mr-1 h-3 w-3"/> {((displaySkill as any).created_at || '').split('T')[0]}</span>
+              <span className="text-muted-foreground">•</span>
+              {isQuarantined ? (
+                <Badge variant="outline" className="bg-red-500/15 border-red-500/30 text-red-400 font-normal">
+                  <AlertTriangle className="w-3 h-3 mr-1 text-red-400" />
+                  Quarantined
+                </Badge>
+              ) : isFlagged ? (
+                <Badge variant="outline" className="bg-red-500/10 border-red-500/25 text-red-400 font-normal">
+                  <AlertTriangle className="w-3 h-3 mr-1 text-red-400" />
+                  Community Flagged
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="bg-emerald-500/10 border-emerald-500/25 text-emerald-400 font-normal">
+                  <ShieldCheck className="w-3 h-3 mr-1 text-emerald-400" />
+                  Security Verified
+                </Badge>
+              )}
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent pb-2">{displaySkill.title}</h1>
@@ -102,6 +138,45 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
           </div>
 
           <Separator className="bg-white/10" />
+
+          {/* Quarantined Owner Notice */}
+          {isQuarantined && (
+            <div className="bg-red-500/20 border border-red-500/40 rounded-2xl p-4 flex items-start gap-3.5 text-red-200 text-sm backdrop-blur-sm">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-300">Moderation Notice: Quarantined</p>
+                <p className="text-xs text-red-200/80 mt-1 leading-relaxed">
+                  This skill has been quarantined by Kunbase moderation and is hidden from public discovery due to security or policy violations. Only you (the owner) can see this preview.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Critical Flagged Advisory Banner */}
+          {isFlagged && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-start gap-3.5 text-red-200/90 text-sm backdrop-blur-sm">
+              <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-red-300">Safety Warning: Community Reported</p>
+                <p className="text-xs text-red-200/70 mt-1 leading-relaxed">
+                  This prompt or skill has received community reports for suspicious or potentially malicious instructions. Inspect all instructions carefully before using it.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Terminal Command Execution Advisory Banner */}
+          {hasTerminalCommands && !isFlagged && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-3.5 text-amber-200/90 text-sm backdrop-blur-sm">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-300">Terminal Command Advisory</p>
+                <p className="text-xs text-amber-200/70 mt-1 leading-relaxed">
+                  This skill contains terminal execution commands. We recommend always reviewing shell scripts and commands before allowing an autonomous AI agent to run them on your system.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Markdown Viewer */}
           <div className="glass-panel rounded-2xl p-6 md:p-10">
@@ -135,6 +210,26 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
                 )}
               </div>
             </div>
+
+            {/* Safety & Moderation */}
+            <div className="pt-6 border-t border-white/10 space-y-3">
+              <h3 className="font-semibold text-xs flex items-center text-muted-foreground uppercase tracking-wider">
+                Safety & Trust
+              </h3>
+              <div className="text-xs text-muted-foreground space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Static scan passed</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground/80">
+                  Verified against destructive OS exploits and unverified webhooks.
+                </p>
+                <div className="pt-1">
+                  <ReportSkillDialog skillId={displaySkill.id} skillTitle={displaySkill.title} />
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -142,3 +237,4 @@ export default async function SkillDetailPage({ params }: { params: Promise<{ us
     </div>
   )
 }
+

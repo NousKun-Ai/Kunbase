@@ -16,3 +16,20 @@ export const strictRateLimiter = new Ratelimit({
   analytics: true,
   prefix: "@upstash/ratelimit-strict",
 });
+
+// Rate limiter for publishing skills (5 publishes per 10 minutes)
+export const publishRateLimiter = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, "10 m"),
+  analytics: true,
+  prefix: "@upstash/ratelimit-publish",
+});
+
+// Rate limiter for reporting skills (5 reports per 5 minutes)
+export const reportRateLimiter = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, "5 m"),
+  analytics: true,
+  prefix: "@upstash/ratelimit-report",
+});
+

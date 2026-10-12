@@ -57,7 +57,7 @@
   --radius: 0.5rem;
 }
 
-/* Force dark mode entirely for KunHub MVP as per PRD */
+/* Force dark mode entirely for Kunbase MVP as per PRD */
 body {
   color: var(--foreground);
   background: radial-gradient(circle at 15% 50%, oklch(0.6 0.15 260 / 0.1), transparent 30%),

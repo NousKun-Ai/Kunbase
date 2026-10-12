@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Sparkles, Code2, UploadCloud, Loader2, Lock, Globe, Eye, Code } from "lucide-react"
+import { Sparkles, Code2, UploadCloud, Loader2, Lock, Globe, Eye, Code, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
@@ -22,6 +22,16 @@ import {
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { slugify } from "@/lib/utils"
+import { publishSkillAction } from "@/app/actions"
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_CONTENT_CHARS,
+  ALLOWED_FILE_EXTENSIONS,
+  containsBinaryBytes,
+  scanContentForThreats,
+  type SecurityScanReport,
+  sanitizeMarkdownUrl,
+} from "@/lib/security"
 
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
@@ -44,6 +54,20 @@ export function PublishForm() {
   const [isDragging, setIsDragging] = React.useState(false)
   const [editorMode, setEditorMode] = React.useState<"edit" | "preview">("edit")
 
+  // Real-time security analysis on prompt & skill content
+  const securityReport = React.useMemo<SecurityScanReport>(() => {
+    if (!content.trim()) {
+      return {
+        isSafe: true,
+        hasCritical: false,
+        hasWarnings: false,
+        issues: [],
+        checkedAt: "",
+      }
+    }
+    return scanContentForThreats(content, title, description)
+  }, [content, title, description])
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -52,11 +76,44 @@ export function PublishForm() {
   }
 
   const readFile = (file: File) => {
+    setError(null)
+
+    // 1. Validate file size (max 300 KB)
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setError(`File is too large (${(file.size / 1024).toFixed(1)} KB). Maximum allowed size for prompts and skills is 300 KB.`)
+      return
+    }
+
+    // 2. Validate file extension
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+    if (!ALLOWED_FILE_EXTENSIONS.includes(extension)) {
+      setError(`Unsupported file type "${extension}". Only plain text and markdown (.md, .txt, .mdc, .yaml, .json) are allowed.`)
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (event) => {
       const text = event.target?.result
       if (typeof text === "string") {
+        // 3. Reject binary executables / non-printable data
+        if (containsBinaryBytes(text)) {
+          setError("Upload rejected: File contains binary executable data or corrupted characters. Only plain text and markdown are allowed.")
+          return
+        }
+
+        // 4. Character limit check
+        if (text.length > MAX_CONTENT_CHARS) {
+          setError(`File exceeds the limit of ${MAX_CONTENT_CHARS.toLocaleString()} characters.`)
+          return
+        }
+
         setContent(text)
+
+        // 5. Automated threat check
+        const scan = scanContentForThreats(text, title, description)
+        if (scan.hasCritical) {
+          setError(`Security Alert: Detected high-risk instruction or exploit (${scan.issues[0]?.message}). Please remove dangerous commands.`)
+        }
       }
     }
     reader.readAsText(file)
@@ -84,38 +141,28 @@ export function PublishForm() {
     setError(null)
     setIsSubmitting(true)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      setError("You must be signed in to publish.")
+    // Pre-submission client validation
+    if (content.length > MAX_CONTENT_CHARS) {
+      setError(`Content exceeds maximum allowed limit of ${MAX_CONTENT_CHARS.toLocaleString()} characters.`)
       setIsSubmitting(false)
       return
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("username")
-      .eq("id", user.id)
-      .single()
-
-    if (!profile) {
-      setError("Could not find your profile. Try signing in again.")
+    const scan = scanContentForThreats(content, title, description)
+    if (scan.hasCritical) {
+      const issue = scan.issues.find(i => i.severity === "critical")
+      setError(`Security Block: ${issue?.message || "Dangerous command or exploit pattern detected."} Malicious code cannot be published to the registry.`)
       setIsSubmitting(false)
       return
     }
 
-    const slug = slugify(title)
     const parsedTags = tags
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean)
 
-    const { error: insertError } = await supabase.from("skills").insert({
-      owner_id: user.id,
+    const res = await publishSkillAction({
       title,
-      slug,
       description,
       category,
       tags: parsedTags,
@@ -126,17 +173,16 @@ export function PublishForm() {
 
     setIsSubmitting(false)
 
-    if (insertError) {
-      setError(
-        insertError.code === "23505"
-          ? "You already have something published with that title. Try a different title."
-          : "Something went wrong publishing this. Please try again."
-      )
+    if (res.error) {
+      setError(res.error)
       return
     }
 
-    router.push(`/${profile.username}/${slug}`)
+    if (res.username && res.slug) {
+      router.push(`/${res.username}/${res.slug}`)
+    }
   }
+
 
   return (
     <motion.form 
@@ -278,14 +324,76 @@ export function PublishForm() {
             </div>
           </div>
           
+          {/* Real-time Security Diagnostic Banner */}
+          {securityReport.issues.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`p-3 rounded-xl border text-xs flex flex-col gap-2 ${
+                securityReport.hasCritical
+                  ? "bg-red-500/10 border-red-500/30 text-red-300"
+                  : "bg-amber-500/10 border-amber-500/30 text-amber-300"
+              }`}
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                {securityReport.hasCritical ? (
+                  <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                )}
+                <span>
+                  {securityReport.hasCritical
+                    ? "Security Alert: High-risk command or exploit detected (Publication blocked)"
+                    : "Security Notice: Potentially sensitive pattern detected"}
+                </span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 pl-1 text-[11px]">
+                {securityReport.issues.map((issue, idx) => (
+                  <li key={idx}>
+                    <span className="font-medium">{issue.message}</span>
+                    {issue.snippet && (
+                      <code className="ml-1.5 px-1.5 py-0.5 bg-black/40 rounded text-[10px] font-mono text-white/90">
+                        {issue.snippet}
+                      </code>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          )}
+
           <div 
             className={`relative flex-1 border rounded-lg overflow-hidden transition-all duration-300 ${isDragging ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-white/10 bg-black/20'}`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="absolute top-0 left-0 w-full h-9 bg-black/40 border-b border-white/5 flex items-center px-4 text-xs font-mono text-muted-foreground z-10 backdrop-blur-md">
-              {type === "prompt" ? "system-prompt.md" : "architecture-rule.mdc"}
+            <div className="absolute top-0 left-0 w-full h-9 bg-black/40 border-b border-white/5 flex items-center justify-between px-4 text-xs font-mono text-muted-foreground z-10 backdrop-blur-md">
+              <div className="flex items-center gap-2.5">
+                <span>{type === "prompt" ? "system-prompt.md" : "architecture-rule.mdc"}</span>
+                <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">
+                  ({content.length.toLocaleString()} / {MAX_CONTENT_CHARS.toLocaleString()} chars)
+                </span>
+              </div>
+
+              {content.trim() ? (
+                securityReport.hasCritical ? (
+                  <div className="flex items-center gap-1.5 text-red-400 font-sans text-[11px] bg-red-500/15 px-2.5 py-0.5 rounded-full border border-red-500/30">
+                    <ShieldAlert className="w-3 h-3 text-red-400" />
+                    <span>Exploit Blocked</span>
+                  </div>
+                ) : securityReport.hasWarnings ? (
+                  <div className="flex items-center gap-1.5 text-amber-400 font-sans text-[11px] bg-amber-500/15 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    <AlertTriangle className="w-3 h-3 text-amber-400" />
+                    <span>Review Needed</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-emerald-400 font-sans text-[11px] bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    <span>Security Check: Clean</span>
+                  </div>
+                )
+              ) : null}
             </div>
             
             <AnimatePresence mode="wait">
@@ -316,7 +424,7 @@ export function PublishForm() {
                 >
                   <div className="prose prose-invert prose-sm max-w-none">
                     {content ? (
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} urlTransform={sanitizeMarkdownUrl}>
                         {content}
                       </ReactMarkdown>
                     ) : (
@@ -326,6 +434,7 @@ export function PublishForm() {
                 </motion.div>
               )}
             </AnimatePresence>
+
 
             <AnimatePresence>
               {isDragging && (

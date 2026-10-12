@@ -18,6 +18,8 @@ export interface DatabaseSkill {
   type: string
   stars_count: number
   copies_count: number
+  owner_id?: string
+  security_status?: string
   profiles: {
     username: string
     name: string

@@ -26,7 +26,9 @@ export default async function ExplorePage({ searchParams }: { searchParams: Prom
 
   const { data: skills } = await query
 
-  const rawSkills = skills || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawSkills = (skills || []).filter((s: any) => s.security_status !== "quarantined")
+
   
   // Fetch profiles for these skills manually to avoid foreign key join errors
   const ownerIds = [...new Set(rawSkills.map(s => s.owner_id))]

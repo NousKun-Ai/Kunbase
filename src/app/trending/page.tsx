@@ -19,7 +19,9 @@ export default async function TrendingPage() {
     .order("stars_count", { ascending: false })
     .limit(50)
 
-  const rawSkills = skills || []
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawSkills = (skills || []).filter((s: any) => s.security_status !== "quarantined")
+
   
   // Fetch profiles for these skills manually
   const ownerIds = [...new Set(rawSkills.map(s => s.owner_id))]
